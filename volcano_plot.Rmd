@@ -1,0 +1,58 @@
+---
+title: "Volcano Plot"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+## Load data
+
+```{r load-data}
+library(ggplot2)
+
+de <- read.csv(
+  "../scripts/drosphila_example_de.csv",
+  row.names = 1
+)
+
+# Drop genes with no test statistics (e.g. zero counts)
+de <- de[!is.na(de$padj) & !is.na(de$log2FoldChange), ]
+
+head(de)
+```
+
+## Classify genes
+
+```{r classify}
+lfc_cutoff <- 1
+padj_cutoff <- 0.05
+
+de$significance <- "Not significant"
+de$significance[de$log2FoldChange >= lfc_cutoff & de$padj < padj_cutoff] <- "Up"
+de$significance[de$log2FoldChange <= -lfc_cutoff & de$padj < padj_cutoff] <- "Down"
+de$significance[is.na(de$padj)] <- "Not significant"
+
+table(de$significance)
+```
+
+## Volcano plot
+
+```{r volcano, fig.width=7, fig.height=6}
+ggplot(de, aes(x = log2FoldChange, y = -log10(padj), color = significance)) +
+  geom_point(alpha = 0.6, size = 1.2) +
+  scale_color_manual(
+    values = c("Up" = "firebrick", "Down" = "steelblue", "Not significant" = "grey70")
+  ) +
+  geom_vline(xintercept = c(-lfc_cutoff, lfc_cutoff), linetype = "dashed", color = "grey40") +
+  geom_hline(yintercept = -log10(padj_cutoff), linetype = "dashed", color = "grey40") +
+  labs(
+    title = "Volcano Plot of Differential Expression",
+    subtitle = "Drosophila example dataset",
+    x = expression(log[2]~"fold change"),
+    y = expression(-log[10]~"adjusted p-value"),
+    color = "Significance"
+  ) +
+  theme_minimal()
+```
